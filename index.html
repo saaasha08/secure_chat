@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureChat - Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="logo-section">
+                <div class="logo-circle">🔒</div>
+                <h1>SecureChat</h1>
+                <p>End-to-End Encrypted Messenger</p>
+            </div>
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="showTab('login')">Login</button>
+                <button class="tab-btn" onclick="showTab('register')">Register</button>
+            </div>
+            <div id="login-form" class="form-box active">
+                <div class="input-field"><label>👤 Username</label><input type="text" id="luser" placeholder="Username"></div>
+                <div class="input-field"><label>🔑 Password</label><input type="password" id="lpass" placeholder="Password"></div>
+                <button class="submit-btn" onclick="login()">Login 🔐</button>
+                <div id="lerr" class="alert error-alert"></div>
+            </div>
+            <div id="register-form" class="form-box">
+                <div class="input-field"><label>👤 Username</label><input type="text" id="ruser" placeholder="Username"></div>
+                <div class="input-field"><label>🔑 Password</label><input type="password" id="rpass" placeholder="Password"></div>
+                <div class="input-field"><label>✅ Confirm</label><input type="password" id="rcpass" placeholder="Confirm"></div>
+                <button class="submit-btn" onclick="register()">Register 🚀</button>
+                <div id="rerr" class="alert error-alert"></div>
+                <div id="rok" class="alert success-alert"></div>
+            </div>
+            <div class="security-features">
+                <div class="feature-tag">🔐 RSA</div>
+                <div class="feature-tag">✍️ Signature</div>
+                <div class="feature-tag">#️⃣ SHA-256</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const A = 'http://localhost:5000';
+        function showTab(t) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.form-box').forEach(f => f.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(t + '-form').classList.add('active');
+            document.getElementById('lerr').style.display = 'none';
+            document.getElementById('rerr').style.display = 'none';
+            document.getElementById('rok').style.display = 'none';
+        }
+        async function login() {
+            const u = document.getElementById('luser').value, p = document.getElementById('lpass').value, er = document.getElementById('lerr');
+            if (!u || !p) { er.textContent = 'Fill all fields'; er.style.display = 'block'; return; }
+            const r = await fetch(A + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+            const d = await r.json();
+            if (r.ok) {
+                localStorage.setItem('token', d.token); localStorage.setItem('userId', d.user_id); localStorage.setItem('username', d.username); localStorage.setItem('publicKey', d.public_key); localStorage.setItem('privateKey', d.private_key);
+                location.href = '/chat';
+            } else { er.textContent = d.e; er.style.display = 'block'; }
+        }
+        async function register() {
+            const u = document.getElementById('ruser').value, p = document.getElementById('rpass').value, cp = document.getElementById('rcpass').value, er = document.getElementById('rerr'), ok = document.getElementById('rok');
+            er.style.display = 'none'; ok.style.display = 'none';
+            if (!u || !p || !cp) { er.textContent = 'Fill all fields'; er.style.display = 'block'; return; }
+            if (p !== cp) { er.textContent = 'Passwords dont match'; er.style.display = 'block'; return; }
+            const r = await fetch(A + '/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+            const d = await r.json();
+            if (r.ok) { ok.textContent = d.m; ok.style.display = 'block'; setTimeout(() => document.querySelector('.tab-btn').click(), 1500); }
+            else { er.textContent = d.e; er.style.display = 'block'; }
+        }
+        if (localStorage.getItem('token')) location.href = '/chat';
+    </script>
+</body>
+</html>

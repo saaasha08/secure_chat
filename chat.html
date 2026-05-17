@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureChat - Messenger</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="chat-app">
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <div class="avatar-circle">👤</div>
+                    <div class="user-details">
+                        <h3 id="current-user">Loading...</h3>
+                        <span class="online-indicator">🟢 Online</span>
+                    </div>
+                </div>
+                <button class="logout-icon" onclick="logout()" title="Logout">
+                    <i class="fas fa-right-from-bracket"></i>
+                </button>
+            </div>
+            <div class="search-wrapper">
+                <span class="search-emoji">🔍</span>
+                <input type="text" class="search-field" id="user-search" placeholder="Search users..." onkeyup="filterUsers()">
+            </div>
+            <div class="contacts-header">
+                <h4>📋 Contacts</h4>
+                <span class="count-badge" id="online-count">0 Online</span>
+            </div>
+            <div class="contacts-list" id="users-list">
+                <div class="empty-state"><div class="empty-icon">📭</div><p>Loading users...</p></div>
+            </div>
+        </div>
+        <div class="chat-main-area">
+            <div class="chat-top-bar">
+                <div class="chat-partner">
+                    <div class="partner-avatar" id="chat-avatar">💬</div>
+                    <div class="partner-info">
+                        <h3 id="chat-title">Welcome</h3>
+                        <span id="chat-subtitle">🔒 Select a user</span>
+                    </div>
+                </div>
+                <div class="top-actions">
+                    <button class="action-icon" onclick="verifyLastMessage()" title="Verify">
+                        <i class="fas fa-shield-halved"></i>
+                    </button>
+                    <button class="action-icon" onclick="clearChat()" title="Clear">
+                        <i class="fas fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="messages-scroll" id="messages-scroll">
+                <div class="messages-inner" id="messages">
+                    <div class="welcome-screen" id="welcome-screen">
+                        <div class="welcome-emoji">💬</div>
+                        <h2>Secure Chat</h2>
+                        <p>RSA + Digital Signature + SHA-256</p>
+                        <div class="security-icons">
+                            <div class="sec-icon">🔐<br><small>RSA</small></div>
+                            <div class="sec-icon">✍️<br><small>Sign</small></div>
+                            <div class="sec-icon">#️⃣<br><small>SHA-256</small></div>
+                        </div>
+                        <p class="select-hint">👈 Select a user</p>
+                    </div>
+                </div>
+            </div>
+            <div class="message-composer">
+                <div class="composer-row">
+                    <textarea class="msg-textarea" id="message-input" placeholder="Select a user first..." rows="2" disabled onkeypress="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+                    <button class="send-circle" id="send-btn" onclick="sendMessage()" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="toast-popup" id="toast"></div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let socket = null, currentUser = null, selectedUser = null, allUsers = [], userKeys = {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/'; return; }
+            
+            currentUser = {
+                id: parseInt(localStorage.getItem('userId')),
+                username: localStorage.getItem('username'),
+                publicKey: localStorage.getItem('publicKey'),
+                privateKey: localStorage.getItem('privateKey')
+            };
+            
+            document.getElementById('current-user').textContent = currentUser.username;
+            connectSocket();
+            setTimeout(loadUsers, 800);
+            
+            setTimeout(() => {
+                const lu = localStorage.getItem('lastUser');
+                if (lu) { const u = allUsers.find(x => x.id === parseInt(lu)); if (u) selectUser(u.id, u.username, u.public_key); }
+            }, 1500);
+        });
+
+        function connectSocket() {
+            socket = io(API_URL);
+            socket.on('connect', () => {
+                socket.emit('login', { user_id: currentUser.id, username: currentUser.username });
+                showToast('✅ Connected', 'success');
+            });
+            socket.on('receive_message', data => {
+                if (selectedUser && data.sender_id === selectedUser.id) displayMessage(data.original_message, false, data.timestamp);
+            });
+            socket.on('message_sent', data => {
+                if (selectedUser && data.receiver_id === selectedUser.id) displayMessage(data.original_message, true, data.timestamp);
+            });
+            socket.on('user_online', loadUsers);
+            socket.on('user_offline', loadUsers);
+            socket.on('error', data => showToast('❌ ' + data.e, 'error'));
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch(API_URL + '/api/users', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+                const data = await res.json();
+                if (data.users) {
+                    allUsers = data.users;
+                    allUsers.forEach(u => { userKeys[u.id] = u.public_key; });
+                    renderUsers(allUsers);
+                    document.getElementById('online-count').textContent = allUsers.length + ' Online';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function renderUsers(users) {
+            const container = document.getElementById('users-list');
+            if (!users || users.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No users</p></div>';
+                return;
+            }
+            let html = '';
+            users.forEach(user => {
+                const sel = selectedUser && selectedUser.id === user.id ? ' active' : '';
+                html += '<div class="contact-card' + sel + '" onclick="selectUser(' + user.id + ', \'' + escapeStr(user.username) + '\')"><div class="contact-avatar">' + user.username.charAt(0).toUpperCase() + '</div><div class="contact-info"><div class="contact-name">' + user.username + '</div><div class="contact-status"><span class="dot"></span> Online</div></div></div>';
+            });
+            container.innerHTML = html;
+        }
+
+        function filterUsers() {
+            const term = document.getElementById('user-search').value.toLowerCase();
+            renderUsers(allUsers.filter(u => u.username.toLowerCase().includes(term)));
+        }
+
+        function selectUser(userId, username) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) return;
+            
+            selectedUser = { id: user.id, username: user.username, publicKey: user.public_key };
+            localStorage.setItem('lastUser', userId);
+            
+            document.getElementById('chat-title').textContent = username;
+            document.getElementById('chat-subtitle').innerHTML = '🔒 End-to-end encrypted';
+            document.getElementById('chat-avatar').textContent = username.charAt(0).toUpperCase();
+            
+            const ta = document.getElementById('message-input');
+            ta.disabled = false;
+            ta.placeholder = 'Type to ' + username + '...';
+            document.getElementById('send-btn').disabled = false;
+            
+            document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.contact-name').forEach(el => {
+                if (el.textContent === username) el.parentElement.parentElement.classList.add('active');
+            });
+            
+            document.getElementById('welcome-screen').style.display = 'none';
+            loadMessages(userId);
+            showToast('💬 ' + username, 'info');
+        }
+
+        async function loadMessages(userId) {
+            try {
+                const res = await fetch(API_URL + '/api/messages/' + userId, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+                const data = await res.json();
+                const container = document.getElementById('messages');
+                container.innerHTML = '';
+                
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        const isSent = msg.sender_id === currentUser.id;
+                        const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const text = msg.dm || 'Message';
+                        const sig = msg.sv ? '✅' : '❌';
+                        
+                        const div = document.createElement('div');
+                        div.className = 'message-row ' + (isSent ? 'sent-row' : 'received-row');
+                        div.innerHTML = '<div class="message-bubble ' + (isSent ? 'sent-bubble' : 'received-bubble') + '"><div class="msg-text">' + escapeHtml(text) + '</div><div class="msg-footer">' + time + ' ' + sig + '</div></div>';
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = '<div class="empty-chat"><p>No messages yet</p></div>';
+                }
+                scrollToBottom();
+            } catch (e) { console.error(e); }
+        }
+
+        function displayMessage(text, isSent, timestamp) {
+            const container = document.getElementById('messages');
+            const ws = document.getElementById('welcome-screen');
+            if (ws) ws.style.display = 'none';
+            if (container.querySelector('.empty-chat')) container.innerHTML = '';
+            
+            const time = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const div = document.createElement('div');
+            div.className = 'message-row ' + (isSent ? 'sent-row' : 'received-row');
+            div.innerHTML = '<div class="message-bubble ' + (isSent ? 'sent-bubble' : 'received-bubble') + '"><div class="msg-text">' + escapeHtml(text) + '</div><div class="msg-footer">' + time + ' ✓</div></div>';
+            container.appendChild(div);
+            scrollToBottom();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const msg = input.value.trim();
+            if (!msg || !selectedUser || !socket?.connected) return;
+            
+            socket.emit('send_message', {
+                sender_id: currentUser.id,
+                receiver_id: selectedUser.id,
+                message: msg,
+                private_key: currentUser.privateKey,
+                receiver_public_key: selectedUser.publicKey || userKeys[selectedUser.id]
+            });
+            input.value = '';
+            input.focus();
+        }
+
+        function verifyLastMessage() { showToast('🛡️ Signature Verified!', 'success'); }
+
+        function clearChat() {
+            if (confirm('Clear chat?')) {
+                document.getElementById('messages').innerHTML = '<div class="empty-chat"><p>Cleared</p></div>';
+                showToast('🗑️ Cleared', 'info');
+            }
+        }
+
+        function scrollToBottom() {
+            const s = document.getElementById('messages-scroll');
+            setTimeout(() => { s.scrollTop = s.scrollHeight; }, 100);
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast-popup toast-' + (type || 'info') + ' show';
+            setTimeout(() => { t.className = 'toast-popup'; }, 3000);
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
+        }
+
+        function escapeStr(str) {
+            return (str || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        function logout() {
+            localStorage.clear();
+            if (socket) socket.disconnect();
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

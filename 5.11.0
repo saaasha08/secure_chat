@@ -1,0 +1,43 @@
+Collecting Flask
+  Downloading flask-3.1.3-py3-none-any.whl.metadata (3.2 kB)
+Collecting Flask-SocketIO
+  Downloading flask_socketio-5.6.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting Flask-CORS
+  Downloading flask_cors-6.0.2-py3-none-any.whl.metadata (5.3 kB)
+Collecting mysql-connector-python
+  Downloading mysql_connector_python-9.7.0-cp314-cp314-win_amd64.whl.metadata (11 kB)
+Collecting cryptography
+  Downloading cryptography-48.0.0-cp311-abi3-win_amd64.whl.metadata (4.3 kB)
+Collecting pyjwt
+  Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+Collecting bcrypt
+  Downloading bcrypt-5.0.0-cp39-abi3-win_amd64.whl.metadata (10 kB)
+Collecting python-socketio
+  Downloading python_socketio-5.16.1-py3-none-any.whl.metadata (3.3 kB)
+Requirement already satisfied: blinker>=1.9.0 in C:\Users\saash\AppData\Roaming\Python\Python314\site-packages (from Flask) (1.9.0)
+Requirement already satisfied: click>=8.1.3 in C:\Users\saash\AppData\Roaming\Python\Python314\site-packages (from Flask) (8.3.3)
+Requirement already satisfied: itsdangerous>=2.2.0 in C:\Users\saash\AppData\Roaming\Python\Python314\site-packages (from Flask) (2.2.0)
+Requirement already satisfied: jinja2>=3.1.2 in C:\Users\saash\AppData\Roaming\Python\Python314\site-packages (from Flask) (3.1.6)
+Requirement already satisfied: markupsafe>=2.1.1 in C:\Users\saash\AppData\Roaming\Python\Python314\site-packages (from Flask) (3.0.3)
+Requirement already satisfied: werkzeug>=3.1.0 in C:\Users\saash\AppData\Roaming\Python\Python314\site-packages (from Flask) (3.1.8)
+Requirement already satisfied: cffi>=2.0.0 in C:\Program Files\Python314\Lib\site-packages (from cryptography) (2.0.0)
+Requirement already satisfied: bidict>=0.21.0 in C:\Program Files\Python314\Lib\site-packages (from python-socketio) (0.23.1)
+Requirement already satisfied: python-engineio>=4.11.0 in C:\Program Files\Python314\Lib\site-packages (from python-socketio) (4.13.1)
+Requirement already satisfied: pycparser in C:\Program Files\Python314\Lib\site-packages (from cffi>=2.0.0->cryptography) (3.0)
+Requirement already satisfied: colorama in C:\Users\saash\AppData\Roaming\Python\Python314\site-packages (from click>=8.1.3->Flask) (0.4.6)
+Requirement already satisfied: simple-websocket>=0.10.0 in C:\Program Files\Python314\Lib\site-packages (from python-engineio>=4.11.0->python-socketio) (1.1.0)
+Requirement already satisfied: wsproto in C:\Program Files\Python314\Lib\site-packages (from simple-websocket>=0.10.0->python-engineio>=4.11.0->python-socketio) (1.3.2)
+Requirement already satisfied: h11<1,>=0.16.0 in C:\Program Files\Python314\Lib\site-packages (from wsproto->simple-websocket>=0.10.0->python-engineio>=4.11.0->python-socketio) (0.16.0)
+Downloading flask-3.1.3-py3-none-any.whl (103 kB)
+Downloading flask_socketio-5.6.1-py3-none-any.whl (18 kB)
+Downloading flask_cors-6.0.2-py3-none-any.whl (13 kB)
+Downloading mysql_connector_python-9.7.0-cp314-cp314-win_amd64.whl (18.2 MB)
+   ---------------------------------------- 18.2/18.2 MB 4.7 MB/s  0:00:03
+Downloading cryptography-48.0.0-cp311-abi3-win_amd64.whl (3.8 MB)
+   ---------------------------------------- 3.8/3.8 MB 4.7 MB/s  0:00:00
+Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+Downloading bcrypt-5.0.0-cp39-abi3-win_amd64.whl (150 kB)
+Downloading python_socketio-5.16.1-py3-none-any.whl (82 kB)
+Installing collected packages: pyjwt, mysql-connector-python, bcrypt, Flask, cryptography, Flask-CORS, python-socketio, Flask-SocketIO
+
+Successfully installed Flask-3.1.3 Flask-CORS-6.0.2 Flask-SocketIO-5.6.1 bcrypt-5.0.0 cryptography-48.0.0 mysql-connector-python-9.7.0 pyjwt-2.12.1 python-socketio-5.16.1
